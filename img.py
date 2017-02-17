@@ -107,7 +107,7 @@ else:
     vertical_flip=True)
     
     test_gen = ImageDataGenerator(rescale=1./255)
-    train_generator = train_gen.flow_from_directory('/media/b/DC0C9F700C9F4504/crop_train/',
+    train_generator = train_gen.flow_from_directory('',
                                              target_size=(512, 512),
                                             batch_size=32,classes=['0','1','2','3','4'],
                                             class_mode='categorical')
