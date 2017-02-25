@@ -1,17 +1,15 @@
 import os
 import numpy as np
 import theano.tensor as T
-from keras.models import Model
-from keras.layers import Input,Dense,Convolution2D,MaxPooling2D,MaxoutDense, Dropout, Flatten,Merge, Reshape,Activation
 from keras.optimizers import SGD
 from keras.preprocessing.image import ImageDataGenerator
-from keras.layers.advanced_activations import LeakyReLU
+
 from scipy.misc import imread
 import pandas as p
 from keras.utils import np_utils
 from losses import kappalogclipped
 from metrics import kappa
-
+from model import model
 
 output_size = 512
 batch_size = 64
@@ -42,50 +40,7 @@ def data(imgpath=None,labelpath=None,part=False):
 
 
 
-inputs = Input(shape=(3,512,512))
-x = Convolution2D(32,7,7, subsample=(2,2), border_mode='same')(inputs)
-x = LeakyReLU(alpha=leakness)(x)
-x = MaxPooling2D(pool_size=(3,3), strides=(2,2))
-x = Convolution2D(32,3,3, subsample=(1,1), border_mode='same')(x)
-x = LeakyReLU(alpha=leakness)(x)
-x = MaxPooling2D(pool_size=(3,3), strides=(2,2))
-
-x = Convolution2D(64,3,3, subsample=(1,1), border_mode='same')(x)
-x = LeakyReLU(alpha=leakness)(x)
-x = Convolution2D(64,3,3, subsample=(1,1), border_mode='same')(x)
-x = LeakyReLU(alpha=leakness)(x)
-x = MaxPooling2D(pool_size=(3,3), strides=(2,2))(x)
-
-x = Convolution2D(128,3,3, subsample=(1,1), border_mode='same')(x)
-x = LeakyReLU(alpha=leakness)(x)
-x = Convolution2D(128,3,3, subsample=(1,1), border_mode='same')(x)
-x = LeakyReLU(alpha=leakness)(x)
-x = Convolution2D(128,3,3, subsample=(1,1), border_mode='same')(x)
-x = LeakyReLU(alpha=leakness)(x)
-x = Convolution2D(128,3,3, subsample=(1,1), border_mode='same')(x)
-x = LeakyReLU(alpha=leakness)(x)
-x = MaxPooling2D(pool_size=(3,3), strides=(2,2))(x)
-
-x = Convolution2D(256,3,3, subsample=(1,1), border_mode='same')(x)
-x = LeakyReLU(alpha=leakness)(x)
-x = Convolution2D(256,3,3, subsample=(1,1), border_mode='same')(x)
-x = LeakyReLU(alpha=leakness)(x)
-x = Convolution2D(256,3,3, subsample=(1,1), border_mode='same')(x)
-x = LeakyReLU(alpha=leakness)(x)
-x = Convolution2D(256,3,3, subsample=(1,1), border_mode='same')(x)
-x = LeakyReLU(alpha=leakness)(x)
-x = MaxPooling2D(pool_size=(3,3), strides=(2,2))(x)
-
-x = Dropout(0.5)(x)
-x = Flatten()(x)
-
-x = MaxoutDense(512, nb_feature=4)(x)
-x = Dropout(0.5)(x)
-x = MaxoutDense(512, nb_feature=4)(x)
-x = Dense(5)(x)
-x = Activation('softmax')(x)
-
-model = Model(inputs, x)
+model = model(leakness=leakness)
 sgd = SGD(lr = 0.001, decay=1e-6, momentum=0.9, nesterov=True)
 model.compile(loss='mse' , optimizer=sgd , metrics=['accuracy'])
 
