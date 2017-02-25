@@ -1,41 +1,17 @@
 import os
 import numpy as np
 import theano.tensor as T
-from keras.models import Sequential
-from keras.layers import Dense,Convolution2D,MaxPooling2D,MaxoutDense, Dropout, Flatten,Merge, Reshape,Activation
+from keras.models import Model
+from keras.layers import Input,Dense,Convolution2D,MaxPooling2D,MaxoutDense, Dropout, Flatten,Merge, Reshape,Activation
+from keras.optimizers import SGD
 from keras.preprocessing.image import ImageDataGenerator
 from keras.layers.advanced_activations import LeakyReLU
 from scipy.misc import imread
 import pandas as p
 from keras.utils import np_utils
+from losses import kappalogclipped
+from metrics import kappa
 
-def kappa(t,y,eps=1e-15):
-#   if y.ndim == 1:
-#       y = to_categorical(y,nb_classes=5)
-#   if t.ndim == 1:
-#       t = to_categorical(t,nb_classes=5)
-    
-    num_scored_items, num_ratings = y.shape
-    ratings_mat = K.tile(K.arange(0, num_ratings)[:,None],
-                        (1, num_ratings))
-    ratings_squared = (ratings_mat - ratings_mat.T) ** 2
-    weights = ratings_squared / (num_ratings - 1) ** 2
-
-    y_norm = y / (eps + y.sum(axis=1)[:,None])
-    y = y_norm
-
-    hist_rater_a = K.sum(y, axis=0)
-    hist_rater_b = K.sum(t, axis=0)
-    conf_mat = K.dot(y.T, t)
-
-    nom = K.sum(weights * conf_mat)
-    denom = K.sum(weights * K.dot(hist_rater_a[:,None], 
-                    hist_rater_b[None,:])
-                    / num_scored_items)
-
-    return  1 - nom / denom
-            
-model = Sequential()
 
 output_size = 512
 batch_size = 64
@@ -66,50 +42,52 @@ def data(imgpath=None,labelpath=None,part=False):
 
 
 
-model = Sequential()
-model.add(Convolution2D(32,7,7, subsample=(2,2), border_mode='same',input_shape=(3,512,512)))
-model.add(LeakyReLU(alpha=leakness))
-model.add(MaxPooling2D(pool_size=(3,3), strides=(2,2)))
-model.add(Convolution2D(32,3,3, subsample=(1,1), border_mode='same'))
-model.add(LeakyReLU(alpha=leakness))
-model.add(MaxPooling2D(pool_size=(3,3), strides=(2,2)))
+inputs = Input(shape=(3,512,512))
+x = Convolution2D(32,7,7, subsample=(2,2), border_mode='same')(inputs)
+x = LeakyReLU(alpha=leakness)(x)
+x = MaxPooling2D(pool_size=(3,3), strides=(2,2))
+x = Convolution2D(32,3,3, subsample=(1,1), border_mode='same')(x)
+x = LeakyReLU(alpha=leakness)(x)
+x = MaxPooling2D(pool_size=(3,3), strides=(2,2))
 
-model.add(Convolution2D(64,3,3, subsample=(1,1), border_mode='same'))
-model.add(LeakyReLU(alpha=leakness))
-model.add(Convolution2D(64,3,3, subsample=(1,1), border_mode='same'))
-model.add(LeakyReLU(alpha=leakness))
-model.add(MaxPooling2D(pool_size=(3,3), strides=(2,2)))
+x = Convolution2D(64,3,3, subsample=(1,1), border_mode='same')(x)
+x = LeakyReLU(alpha=leakness)(x)
+x = Convolution2D(64,3,3, subsample=(1,1), border_mode='same')(x)
+x = LeakyReLU(alpha=leakness)(x)
+x = MaxPooling2D(pool_size=(3,3), strides=(2,2))(x)
 
-model.add(Convolution2D(128,3,3, subsample=(1,1), border_mode='same'))
-model.add(LeakyReLU(alpha=leakness))
-model.add(Convolution2D(128,3,3, subsample=(1,1), border_mode='same'))
-model.add(LeakyReLU(alpha=leakness))
-model.add(Convolution2D(128,3,3, subsample=(1,1), border_mode='same'))
-model.add(LeakyReLU(alpha=leakness))
-model.add(Convolution2D(128,3,3, subsample=(1,1), border_mode='same'))
-model.add(LeakyReLU(alpha=leakness))
-model.add(MaxPooling2D(pool_size=(3,3), strides=(2,2)))
+x = Convolution2D(128,3,3, subsample=(1,1), border_mode='same')(x)
+x = LeakyReLU(alpha=leakness)(x)
+x = Convolution2D(128,3,3, subsample=(1,1), border_mode='same')(x)
+x = LeakyReLU(alpha=leakness)(x)
+x = Convolution2D(128,3,3, subsample=(1,1), border_mode='same')(x)
+x = LeakyReLU(alpha=leakness)(x)
+x = Convolution2D(128,3,3, subsample=(1,1), border_mode='same')(x)
+x = LeakyReLU(alpha=leakness)(x)
+x = MaxPooling2D(pool_size=(3,3), strides=(2,2))(x)
 
-model.add(Convolution2D(256,3,3, subsample=(1,1), border_mode='same'))
-model.add(LeakyReLU(alpha=leakness))
-model.add(Convolution2D(256,3,3, subsample=(1,1), border_mode='same'))
-model.add(LeakyReLU(alpha=leakness))
-model.add(Convolution2D(256,3,3, subsample=(1,1), border_mode='same'))
-model.add(LeakyReLU(alpha=leakness))
-model.add(Convolution2D(256,3,3, subsample=(1,1), border_mode='same'))
-model.add(LeakyReLU(alpha=leakness))
-model.add(MaxPooling2D(pool_size=(3,3), strides=(2,2)))
+x = Convolution2D(256,3,3, subsample=(1,1), border_mode='same')(x)
+x = LeakyReLU(alpha=leakness)(x)
+x = Convolution2D(256,3,3, subsample=(1,1), border_mode='same')(x)
+x = LeakyReLU(alpha=leakness)(x)
+x = Convolution2D(256,3,3, subsample=(1,1), border_mode='same')(x)
+x = LeakyReLU(alpha=leakness)(x)
+x = Convolution2D(256,3,3, subsample=(1,1), border_mode='same')(x)
+x = LeakyReLU(alpha=leakness)(x)
+x = MaxPooling2D(pool_size=(3,3), strides=(2,2))(x)
 
-model.add(Dropout(0.5))
-model.add(Flatten())
+x = Dropout(0.5)(x)
+x = Flatten()(x)
 
-model.add(MaxoutDense(512, nb_feature=4))
-model.add(Dropout(0.5))
-model.add(MaxoutDense(512, nb_feature=4))
-model.add(Dense(5))
-model.add(Activation('softmax'))
+x = MaxoutDense(512, nb_feature=4)(x)
+x = Dropout(0.5)(x)
+x = MaxoutDense(512, nb_feature=4)(x)
+x = Dense(5)(x)
+x = Activation('softmax')(x)
 
-model.compile(loss='mse' , optimizer='rmsprop' , metrics=['accuracy'])
+model = Model(inputs, x)
+sgd = SGD(lr = 0.001, decay=1e-6, momentum=0.9, nesterov=True)
+model.compile(loss='mse' , optimizer=sgd , metrics=['accuracy'])
 
 
 if not data_augmentation:
@@ -133,11 +111,11 @@ else:
     vertical_flip=True)
     
     test_gen = ImageDataGenerator(rescale=1./255)
-    train_generator = train_gen.flow_from_directory('',
+    train_generator = train_gen.flow_from_directory('/home/wanghao/data/crop_train/',
                                              target_size=(512, 512),
                                             batch_size=32,classes=['0','1','2','3','4'],
                                             class_mode='categorical')
-    test_generator = test_gen.flow_from_directory('/media/b/DC0C9F700C9F4504/crop_test/',
+    test_generator = test_gen.flow_from_directory('/home/wanghao/data/test/crop_test/',
                                            target_size=(512,512),
                                            batch_size=32,classes=['0','1','2','3','4'],
                                            class_mode='categorical')
@@ -148,3 +126,4 @@ else:
                        validation_data=test_generator,
                         nb_val_samples=800
                        )
+model.save('weights.h5')

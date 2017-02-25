@@ -2,10 +2,10 @@ import numpy as np
 from keras.utils.np_utils import to_categorical
 from keras import backend as K
 def kappa(t,y,eps=1e-15):
-#	if y.ndim == 1:
-#		y = to_categorical(y,nb_classes=5)
-#	if t.ndim == 1:
-#		t = to_categorical(t,nb_classes=5)
+	if y.ndim == 1:
+		y = to_categorical(y,nb_classes=5)
+	if t.ndim == 1:
+		t = to_categorical(t,nb_classes=5)
 	
 	num_scored_items, num_ratings = y.shape
 	ratings_mat = K.tile(K.arange(0, num_ratings)[:,None],
@@ -25,6 +25,4 @@ def kappa(t,y,eps=1e-15):
 					hist_rater_b[None,:])
 					/ num_scored_items)
 
-	return {'kappa': 1 - nom / denom, 
-			'conf_mat' : conf_mat,}
-		
+	return 1 - nom / denom
