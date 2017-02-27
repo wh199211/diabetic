@@ -1,6 +1,5 @@
 import os
 import numpy as np
-import theano.tensor as T
 from keras.optimizers import SGD
 from keras.preprocessing.image import ImageDataGenerator
 
@@ -10,7 +9,7 @@ from keras.utils import np_utils
 from losses import kappalogclipped
 from metrics import kappa
 from model import model
-from generater import train_oversample_gen,train_gen
+from generator import train_oversample_gen,train_gen
 
 default_transfo_params = {'rotation': True, 'rotation_range': (0, 360),
                            'contrast': True, 'contrast_range': (0.7, 1.3),
@@ -33,9 +32,8 @@ default_transfo_params = {'rotation': True, 'rotation_range': (0, 360),
 train_dir = '/media/wanghao/VisualSearch/kaggledrtrain/train_ds2/'
 label = '/home/wanghao/code/diabetic/data/trainLabels.csv'
 data = p.read_csv(label)
-_img_list = data.image.values
+_img_list = data.image.values + '.jpeg'
 _img_level = data.level.values
-
 output_size = 512
 batch_size = 64
 input_height , input_width = (output_size , output_size)
@@ -68,7 +66,7 @@ def data(imgpath=None,labelpath=None,part=False):
 
 model = model(leakness=leakness)
 sgd = SGD(lr = 0.001, decay=1e-6, momentum=0.9, nesterov=True)
-model.compile(loss='mse' , optimizer=sgd , metrics=['accuracy',kappa])
+model.compile(loss='mse' , optimizer=sgd , metrics=['accuracy'])
 
 
 #if not data_augmentation:
@@ -107,7 +105,7 @@ model.compile(loss='mse' , optimizer=sgd , metrics=['accuracy',kappa])
 #                       validation_data=test_generator,
 #                        nb_val_samples=800
 #                       )
-train_loss = []
+train_losses = []
 
 for e in range(nb_epoch / 2):
 	batches = 0
@@ -121,4 +119,7 @@ for e in range(nb_epoch / 2):
 		train_losses.append(batch_train_loss)
 		print 'Epoch',e , ': Batch', batches, 'loss = ',batch_train_loss
 		 
+		if batches > (len(_img_list) / batch_size):
+			break
+
 model.save('weights.h5')

@@ -4,7 +4,7 @@ from keras.layers.advanced_activations import LeakyReLU
 
 def model(leakness = 0.5):
 
-	inputs = Input(shape=(3,512,512))
+	inputs = Input(shape=(512,512,3))
 	x = Convolution2D(32,7,7, subsample=(2,2), border_mode='same')(inputs)
 	x = LeakyReLU(alpha=leakness)(x)
 	x = MaxPooling2D(pool_size=(3,3), strides=(2,2))(x)

@@ -14,21 +14,22 @@ data = p.read_csv(label)
 _img_list = data.image.values
 _img_level = data.level.values
 
-def sample_dr(level=0):
+def sample_dr(level=0,img_list=_img_list,img_level=_img_level):
 	l = []
 	for i,j in enumerate(img_list):
 		if img_level[i] == level:
 			l.append(j)
 	return l
 
-def train_oversample_gen(img_list,img_level,img_dir, params,
+def train_oversample_gen(img_list=_img_list,img_level=_img_level
+						,img_dir='', params={},
 						batch_size=64):
 	#TODO
-	train_0 = sample_dr(level=0)
-	train_1 = sample_dr(level=1)
-	train_2 = sample_dr(level=2)
-	train_3 = sample_dr(level=3)
-	train_4 = sample_dr(level=4)
+	train_0 = sample_dr(level=0,img_list = img_list,img_level=img_level)
+	train_1 = sample_dr(level=1,img_list = img_list,img_level=img_level)
+	train_2 = sample_dr(level=2,img_list = img_list,img_level=img_level)
+	train_3 = sample_dr(level=3,img_list = img_list,img_level=img_level)
+	train_4 = sample_dr(level=4,img_list = img_list,img_level=img_level)
 
 	#train_list = img_list
 	#train_list += img_list[coefs[1] * train_1]
@@ -45,17 +46,18 @@ def train_oversample_gen(img_list,img_level,img_dir, params,
 	Y = [0] * 12 + [1] * 13 + [2] * 13 + [3] * 13 + [4] * 13
 	Y = to_categorical(Y,nb_classes=5)
 	while 1:
-		train = random.sample(train_0,12) + 
-			random.sample(train_1,13) +
-			random.sample(train_2,13) +
-			random.sample(train_3,13) +
+		train = random.sample(train_0,12) + \
+			random.sample(train_1,13) + \
+			random.sample(train_2,13) + \
+			random.sample(train_3,13) + \
 			random.sample(train_4,13)
-		train += '.jpeg'
 		x_list = []
 		for i in train:
+		#	print i
 			img = load_image_and_process(i,prefix_path=img_dir,
 										transfo_params=params)
-			img_arr = np.array(img.reshape((3,img.shape[0],-1)))
+			#img_arr = np.array(img.reshape((3,img.shape[0],-1)))
+			img_arr = np.array(img)
 			x_list.append(img_arr)		
 		X = np.asarray(x_list)
 
