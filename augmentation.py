@@ -3,7 +3,7 @@ from PIL import Image ,ImageChops , ImageOps
 from PIL import ImageEnhance
 import os
 
-def make_thumb(image, size=(512, 512), pad=False):
+def make_thumb(image, size=(299, 299), pad=False):
 	# http://stackoverflow.com/questions/9103257/resize-image-
 	# maintaining-aspect-ratio-and-making-portrait-and-landscape-images-e
 	image.thumbnail(size, Image.BILINEAR)
@@ -21,7 +21,7 @@ def make_thumb(image, size=(512, 512), pad=False):
 
 	return thumb
 
-def load_image_and_process(img, output_shape=(512, 512),
+def load_image_and_process(img, output_shape=(299, 299),
 						   prefix_path='',
 						   transfo_params=None,
 						   rand_values=None):

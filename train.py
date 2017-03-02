@@ -1,15 +1,18 @@
 import os
 import numpy as np
-from keras.optimizers import SGD
+import pickle
+from keras.optimizers import SGD, Adam
 from keras.preprocessing.image import ImageDataGenerator
-
+from keras.applications.vgg19 import VGG19
+from keras.applications.inception_v3 import InceptionV3
+from keras.layers import Input
 from scipy.misc import imread
 import pandas as p
 from keras.utils import np_utils
 from losses import kappalogclipped
-from metrics import kappa
-from model import model
-from generator import train_oversample_gen,train_gen
+from loss import quad_kappa_log_hybrid_loss_clipped
+from model import KerasNet
+from generator import train_oversample_gen,train_gen, valid_gen
 
 default_transfo_params = {'rotation': True, 'rotation_range': (0, 360),
                            'contrast': True, 'contrast_range': (0.7, 1.3),
@@ -30,10 +33,17 @@ default_transfo_params = {'rotation': True, 'rotation_range': (0, 360),
                            'crop_after_rotation': True}
 
 train_dir = '/media/wanghao/VisualSearch/kaggledrtrain/train_ds2/'
-label = '/home/wanghao/code/diabetic/data/trainLabels.csv'
-data = p.read_csv(label)
-_img_list = data.image.values + '.jpeg'
-_img_level = data.level.values
+train_label = '/home/wanghao/code/diabetic/data/trainLabels.csv'
+train_data = p.read_csv(train_label)
+_train_img = train_data.image.values + '.jpeg'
+_train_level = train_data.level.values
+
+test_dir = '/media/wanghao/VisualSearch/kaggledrtest/test_ds2/'
+test_label = '/home/wanghao/code/diabetic/data/retinopathy_solution.csv'
+test_data = p.read_csv(test_label)
+_test_img = test_data.image.values + '.jpeg'
+_test_level = test_data.level.values
+
 output_size = 512
 batch_size = 64
 input_height , input_width = (output_size , output_size)
@@ -41,7 +51,10 @@ output_dim = 5
 num_channels = 3
 leakness = 0.5
 data_augmentation = True
+
+network = 'inception_v3'
 nb_epoch = 200
+optimizer = 'sgd'
 
 def data(imgpath=None,labelpath=None,part=False):
     path = imgpath
@@ -63,10 +76,19 @@ def data(imgpath=None,labelpath=None,part=False):
 
 
 
+if network == 'KerasNet':
+	model = KerasNet(leakness=leakness)
+elif network == 'vgg':
+	model = VGG19(weights=None, classes=5)
+elif network == 'inception_v3':
+	model = InceptionV3(weights=None, classes=5)
 
-model = model(leakness=leakness)
-sgd = SGD(lr = 0.001, decay=1e-6, momentum=0.9, nesterov=True)
-model.compile(loss='mse' , optimizer=sgd , metrics=['accuracy'])
+if optimizer == 'sgd':
+	sgd = SGD(lr = 0.01, decay=1e-6, momentum=0.9, nesterov=True)
+elif optimizer == 'Adam':
+	Adam = Adam(lr = 0.001)
+
+model.compile(loss=quad_kappa_log_hybrid_loss_clipped , optimizer=sgd , metrics=['accuracy'])
 
 
 #if not data_augmentation:
@@ -106,20 +128,32 @@ model.compile(loss='mse' , optimizer=sgd , metrics=['accuracy'])
 #                        nb_val_samples=800
 #                       )
 train_losses = []
+valid_losses = []
 
-for e in range(nb_epoch / 2):
+for e in range(1,10):
 	batches = 0
 
-	for X_batch,Y_batch in train_oversample_gen(_img_list, _img_level,
+	for X_batch,Y_batch in train_oversample_gen(_train_img, _train_level,
 												train_dir,
 												default_transfo_params): 
 		batches +=1
 
 		batch_train_loss = model.train_on_batch(X_batch,Y_batch)
+		
 		train_losses.append(batch_train_loss)
 		print 'Epoch',e , ': Batch', batches, 'loss = ',batch_train_loss
 		 
-		if batches > (len(_img_list) / batch_size):
+	#	if batches > 3:
+		if batches > (len(_train_img) / batch_size):
+			X_valid, Y_valid = valid_gen(_test_img, _test_level,
+									test_dir, default_transfo_params)
+			valid_loss = model.evaluate(X_valid,Y_valid,
+										batch_size=64,verbose=0)
+			valid_losses.append(valid_loss)
+			print 'valid_loss = ',valid_loss
 			break
 
-model.save('weights.h5')
+train_info = {'train_losses':train_losses,
+			  'valid_losses':valid_losses}
+pickle.dump(train_info, open('train_info.pkl','wb'))
+model.save_weights('weights_tmp.h5')

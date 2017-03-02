@@ -4,7 +4,7 @@ import pandas as p
 import random
 from keras.utils.np_utils import to_categorical
 import numpy as np
-from augmentation import load_image_and_process
+from augmentation import load_image_and_process,make_thumb
 
 label = '/home/wanghao/code/diabetic/data/trainLabels.csv'
 sample_coefs = [0,7,3,22,25]
@@ -21,8 +21,8 @@ def sample_dr(level=0,img_list=_img_list,img_level=_img_level):
 			l.append(j)
 	return l
 
-def train_oversample_gen(img_list=_img_list,img_level=_img_level
-						,img_dir='', params={},
+def train_oversample_gen(img_list,img_level,
+						img_dir, params, 
 						batch_size=64):
 	#TODO
 	train_0 = sample_dr(level=0,img_list = img_list,img_level=img_level)
@@ -43,21 +43,32 @@ def train_oversample_gen(img_list=_img_list,img_level=_img_level
 	#label_list.extend([3] * coefs[3])
 	#label_list.extend([4] * coefs[4])
 
-	Y = [0] * 12 + [1] * 13 + [2] * 13 + [3] * 13 + [4] * 13
-	Y = to_categorical(Y,nb_classes=5)
 	while 1:
-		train = random.sample(train_0,12) + \
+		train_uniform = random.sample(train_0,12) + \
 			random.sample(train_1,13) + \
 			random.sample(train_2,13) + \
 			random.sample(train_3,13) + \
 			random.sample(train_4,13)
+		
+		y_uniform = [0] * 12 + [1] * 13 + [2] * 13 + [3] * 13 + [4] * 13
+
+		m = range(batch_size)
+		random.shuffle(m)
+		train = []
+		y = []
+		for i in m:
+			train.append(train_uniform[i])
+			y.append(y_uniform[i])
+		Y = to_categorical(y,nb_classes=5)
 		x_list = []
 		for i in train:
 		#	print i
 			img = load_image_and_process(i,prefix_path=img_dir,
 										transfo_params=params)
-			#img_arr = np.array(img.reshape((3,img.shape[0],-1)))
-			img_arr = np.array(img)
+		#	theano
+			img_arr = np.array(img.reshape((3,img.shape[0],-1)))
+		#	tensorflow
+		#	img_arr = np.array(img)
 			x_list.append(img_arr)		
 		X = np.asarray(x_list)
 
@@ -65,12 +76,10 @@ def train_oversample_gen(img_list=_img_list,img_level=_img_level
 
 def train_gen(img_list, img_level,img_dir,
 				params,batch_size=64):
-	img_list += 'jpeg'
 	while 1:
 		for i in range(len(img_list) / batch_size):
 			batch_list = img_list[batch_size * i : batch_size * (i + 1)]
 			y_list = img_level[batch_size * i : batch_size * (i + 1)]
-			
 			x_list = []
 			for j in batch_list:
 				img = load_image_and_process(j,prefix_path=img_dir,
@@ -81,7 +90,30 @@ def train_gen(img_list, img_level,img_dir,
 			Y = to_categorical(y_list,nb_classes=5)
 
 			yield (X,Y)
+def valid_gen(img_list, img_level, img_dir, 
+				params, batch_size=64):
+	valid_img = img_list[:640]
+	valid_level = img_level[:640]
 	
-def test_gen(self):
+	x_list = []
+	for i in valid_img:
+		img = load_image_and_process(i,prefix_path=img_dir,
+									transfo_params=params)
+		img_arr = np.array(img.reshape((3,img.shape[0],-1)))
+		x_list.append(img_arr)
+	
+	X = np.asarray(x_list)
+	Y = to_categorical(valid_level, nb_classes=5)
+
+	return (X,Y)
+def test_gen(img_list, img_dir,batch_size=64):
 	#TODO
-	return
+	x_list = []
+	for i in img_list:
+		img = imread(os.path.join(img_dir,i))
+		im_resize = make_thumb(img)
+		img_arr = np.array(im_resize.reshape((3,im_resize.shape[0],-1)))
+		x_list.append(img_arr)
+		
+	X = np.asarray(x_list)
+	return X 
